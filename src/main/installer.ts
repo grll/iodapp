@@ -91,7 +91,7 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
     if (mainWindow) {
       mainWindow.webContents.send(
         "install-error",
-        "Failed to process the install data."
+        "Failed to install the MCP server in your Claude Desktop App."
       );
     }
     console.error(error);
