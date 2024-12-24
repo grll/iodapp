@@ -1,10 +1,17 @@
 import { useEffect } from "react";
 
+import { useToast } from "@/hooks/use-toast";
+
 export function Test() {
+  const { toast } = useToast();
 
   useEffect(() => {
     const unlisten = window.installer.onInstallError((error) => {
-      console.log(error);
+      toast({
+        title: "Install Error",
+        description: error,
+        variant: "destructive",
+      });
     });
 
     return () => {
@@ -14,7 +21,10 @@ export function Test() {
 
   useEffect(() => {
     const unlisten = window.installer.onInstallSuccess((message) => {
-      console.log(message);
+      toast({
+        title: "Install Success",
+        description: message,
+      });
     });
 
     return () => {
@@ -24,7 +34,10 @@ export function Test() {
 
   useEffect(() => {
     const unlisten = window.claude.onConfigChanged((config) => {
-      console.log(config);
+      toast({
+        title: "Config Changed",
+        description: JSON.stringify(config),
+      });
     });
 
     return () => {
@@ -34,7 +47,11 @@ export function Test() {
 
   useEffect(() => {
     const unlisten = window.claude.onConfigError((error) => {
-      console.log(error);
+      toast({
+        title: "Config Error",
+        description: error,
+        variant: "destructive",
+      });
     });
 
     return () => {
@@ -42,5 +59,5 @@ export function Test() {
     };
   }, []);
 
-  return <h2>Hello from React Again!</h2>;
+  return <h2 className="text-2xl font-bold">Hello from React Again!</h2>;
 }

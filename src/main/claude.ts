@@ -41,6 +41,7 @@ export async function writeMCPServerConfig(
   serverName: string,
   serverConfig: MCPServerConfig
 ) {
+  console.log("writeMCPServerConfig", serverName, serverConfig);
   // TODO: implement setMCPConfig
 }
 

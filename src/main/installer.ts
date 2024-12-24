@@ -43,6 +43,7 @@ const parseInstallConfigUrl = (url: string) => {
  * @param commit - The commit to clone
  */
 const gitClone = async (repoUrl: string, commit: string) => {
+  console.log("gitClone", repoUrl, commit);
   // TODO: implement git clone
 };
 
