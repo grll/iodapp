@@ -1,14 +1,14 @@
 import { BrowserWindow } from "electron";
 
-import { writeMCPServerConfig, restartClaudeDesktop } from "./claude";
+import {
+  writeMCPServerConfig,
+  restartClaudeDesktop,
+  MCPServerConfig,
+} from "./claude";
 
 type InstallConfig = {
   config: {
-    [key: string]: {
-      command: string;
-      args: string[];
-      env: Record<string, string>;
-    };
+    [key: string]: MCPServerConfig;
   };
   git?: {
     repo_url: string;
@@ -51,7 +51,7 @@ const gitClone = async (repoUrl: string, commit: string) => {
  * @param config - The config to fix
  * @returns The fixed config
  */
-const fixConfig = (config: InstallConfig["config"]) => {
+const fixConfig = (config: MCPServerConfig) => {
   // TODO: implement path config fix
   // TODO: use path from binaries shipped with the app for uv, node, python
   // TODO: infer python version from toml to set --python option uv
@@ -75,12 +75,12 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
       await gitClone(repoUrl, commit);
     }
 
-    const serverConfig = installConfig.config;
+    const serverName = Object.keys(installConfig.config)[0];
+    const serverConfig = installConfig.config[serverName];
     const fixedServerConfig = fixConfig(serverConfig);
-    await writeMCPServerConfig(fixedServerConfig);
+    await writeMCPServerConfig(serverName, fixedServerConfig);
     await restartClaudeDesktop();
 
-    const serverName = Object.keys(installConfig.config)[0];
     if (mainWindow) {
       mainWindow.webContents.send(
         "install-success",

@@ -3,10 +3,16 @@
 import { contextBridge } from "electron";
 
 import { onInstallError, onInstallSuccess } from "./installer";
+import { onConfigChanged, onConfigError } from "./claude";
 
 contextBridge.exposeInMainWorld("installer", {
   onInstallError,
   onInstallSuccess,
+});
+
+contextBridge.exposeInMainWorld("claude", {
+  onConfigChanged,
+  onConfigError,
 });
 
 declare global {
@@ -14,6 +20,10 @@ declare global {
     installer: {
       onInstallError: typeof onInstallError;
       onInstallSuccess: typeof onInstallSuccess;
+    };
+    claude: {
+      onConfigChanged: typeof onConfigChanged;
+      onConfigError: typeof onConfigError;
     };
   }
 }

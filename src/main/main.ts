@@ -3,6 +3,7 @@ import path from "path";
 import started from "electron-squirrel-startup";
 
 import { install } from "./installer";
+import { watchClaudeDesktopConfig } from "./claude";
 
 // we use iod:// protocol to send data from iod.ai to the app.
 const PROTOCOL_PREFIX = "iod";
@@ -45,7 +46,13 @@ const createWindow = () => {
   }
 
   // Open the DevTools.
+  // TODO: remove this in PROD
   mainWindow.webContents.openDevTools();
+
+  const unwatch = watchClaudeDesktopConfig(mainWindow);
+  mainWindow.on("close", () => {
+    unwatch();
+  });
 };
 
 // Handle single instance lock
@@ -54,19 +61,21 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
+  // This method will be called when Electron has finished
+  // initialization and is ready to create browser windows.
+  // Some APIs can only be used after this event occurs.
+  app.on("ready", createWindow);
+
   // second instance is for Windows / Linux
   app.on("second-instance", (_event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+    // on windows / linux protocol trigger secon-instance instead of open-url
+    // this behavior is untested for now we need to make usre the url received is the same...
     install(commandLine.pop()?.slice(0, -1), mainWindow);
   });
-
-  // This method will be called when Electron has finished
-  // initialization and is ready to create browser windows.
-  // Some APIs can only be used after this event occurs.
-  app.on("ready", createWindow);
 
   // open-url is for macOS
   app.on("open-url", (_event, url) => {
