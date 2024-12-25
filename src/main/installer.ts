@@ -2,7 +2,7 @@ import path from "node:path";
 import os from "node:os";
 import fs, { existsSync, mkdirSync } from "node:fs";
 import http from "isomorphic-git/http/node";
-import { BrowserWindow } from "electron";
+import { BrowserWindow, app } from "electron";
 import { clone } from "isomorphic-git";
 
 import {
@@ -52,9 +52,9 @@ function parseInstallConfigUrl(url: string) {
  * Clones a git repository into the tmp directory
  * @param repoUrl - The url of the git repository
  * @param commit - The commit to clone
+ * @param repoName - The name of the repository
  */
-async function gitClone(repoUrl: string, commit: string) {
-  const repoName = repoUrl.split("/").pop();
+async function gitClone(repoUrl: string, commit: string, repoName: string) {
   const repoDir = path.join(IOD_HOME, repoName);
 
   await clone({
@@ -69,16 +69,90 @@ async function gitClone(repoUrl: string, commit: string) {
 }
 
 /**
+ * Resolves the binary path from the app path
+ * @param binary - The binary name
+ * @returns The binary path
+ */
+function resolveBinaryPath(binary: string) {
+  let basePath = path.join(__dirname, '..', '..');
+  if (app.isPackaged) {
+    basePath = path.join(app.getAppPath());
+  }
+
+  let execName = binary;
+  if (process.platform === "win32") {
+    execName += ".exe";
+  }
+
+  const binaryPath = path.join(basePath, "binaries", process.platform, process.arch, execName);
+  if (!existsSync(binaryPath)) {
+    throw new Error(`Binary ${binary} not found in ${binaryPath}`);
+  }
+
+  return binaryPath;
+}
+
+/**
  * Fixes the MCP server config (paths, python / node version, ...)
  * @param config - The config to fix
+ * @param cloned - Whether the repository has been cloned
+ * @param repoName? - The name of the repository must be provided if cloned is true
  * @returns The fixed config
  */
-function fixConfig(config: MCPServerConfig) {
-  // TODO: implement path config fix
-  // TODO: use path from binaries shipped with the app for uv, node, python
-  // TODO: infer python version from toml to set --python option uv
+function fixConfig(config: MCPServerConfig, cloned: boolean, repoName?: string) {
+  if (cloned && !repoName) {
+    throw new Error("Repository name is required when cloning is enabled.");
+  }
+
+  // fix uv
+  if (config.args && config.args.includes("uv")) {
+    const uvIndex = config.args.indexOf("uv");
+
+    // if using uv --directory option we need to replace the following arg with the previously cloned repo
+    if (config.args[uvIndex + 1] === "--directory") {
+      if (!cloned) {
+        throw new Error(
+          "MCP Config is using uv --directory option but the repository is not cloned."
+        );
+      }
+      config.args[uvIndex + 2] = path.join(IOD_HOME, repoName);
+    }
+
+    // if using uv we set uv python to 3.12 as it's the most commonly supported version
+    // it will also force uv to install and use python 3.12.
+    // TODO: later we should infer the python version required from the TOML file
+    config.args.splice(uvIndex + 1, 0, "--python", "3.12");
+  }
+
+  // fix uvx
+  if (config.args && config.args.includes("uvx")) {
+    const uvxIndex = config.args.indexOf("uvx");
+    // if using uvx we set uvx python to 3.12 as it's the most commonly supported version
+    // it will also force uvx to install and use python 3.12.
+    // TODO: later we should infer the python version required from the TOML file
+    config.args.splice(uvxIndex + 1, 0, "--python", "3.12");
+  }
+
+  // fixes for node / npm / npx
+  // TODO: later
+
+  // we replace binaries with binaries shipped with the app
+  // to reduce dependencies on the user's system to a minimum
+  // uv takes care of installing python env, fnm takes care of installing node
+  const binaries = ["uv", "uvx"];
+  if (binaries.includes(config.command)) {
+    config.command = resolveBinaryPath(config.command);
+  }
+  config.args = config.args.map((arg) => {
+    if (binaries.includes(arg)) {
+      return resolveBinaryPath(arg);
+    }
+    return arg;
+  });
+
   return config;
 }
+
 
 /**
  * Installs MCP server on the Claude Desktop App from a given base64 iod.ai url.
@@ -92,16 +166,20 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
   try {
     const installConfig = parseInstallConfigUrl(url);
 
+    let cloned = false;
+    let repoName = "";
     if (installConfig.git) {
       const { repo_url: repoUrl, commit } = installConfig.git;
-      await gitClone(repoUrl, commit);
+      repoName = repoUrl.split("/").pop();
+      await gitClone(repoUrl, commit, repoName);
+      cloned = true;
     }
 
     const serverName = Object.keys(installConfig.config)[0];
     const serverConfig = installConfig.config[serverName];
-    const fixedServerConfig = fixConfig(serverConfig);
-    await writeMCPServerConfig(serverName, fixedServerConfig);
-    await restartClaudeDesktop();
+    const fixedServerConfig = fixConfig(serverConfig, cloned, repoName);
+    writeMCPServerConfig(serverName, fixedServerConfig);
+    restartClaudeDesktop();
 
     if (mainWindow) {
       mainWindow.webContents.send(

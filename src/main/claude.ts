@@ -1,6 +1,7 @@
 import { watch, readFileSync, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { execSync } from "node:child_process";
 import { BrowserWindow } from "electron";
 
 export type MCPServerConfig = {
@@ -27,7 +28,9 @@ const CONFIG_PATHS = {
   ),
 };
 if (!(process.platform in CONFIG_PATHS)) {
-  throw new Error(`Unsupported platform. Claude Desktop App config path for platform '${process.platform}' not found.`);
+  throw new Error(
+    `Unsupported platform. Claude Desktop App config path for platform '${process.platform}' not found.`
+  );
 }
 const CLAUDE_DESKTOP_CONFIG_PATH =
   CONFIG_PATHS[process.platform as keyof typeof CONFIG_PATHS];
@@ -42,20 +45,42 @@ if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
  * @param serverName - the name of the server
  * @param serverConfig - the config to write
  */
-export async function writeMCPServerConfig(
+export function writeMCPServerConfig(
   serverName: string,
   serverConfig: MCPServerConfig
 ) {
-  console.log("writeMCPServerConfig", serverName, serverConfig);
-  // TODO: implement setMCPConfig
+  const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
+  const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
+  jsonConfig.mcpServers[serverName] = serverConfig;
+  writeFileSync(
+    CLAUDE_DESKTOP_CONFIG_PATH,
+    JSON.stringify(jsonConfig, null, 2)
+  );
 }
 
 /**
  * Restarts the Claude Desktop app
+ * @returns the output of the restart command (stdout)
  */
-export async function restartClaudeDesktop() {
+export function restartClaudeDesktop() {
+  if (process.platform !== "darwin") {
+    const restartScript = `
+      tell application "Claude"
+        if its running then
+          quit
+          repeat while its running
+            delay 0.1
+          end repeat
+        end if
+        activate
+      end tell
+    `;
+    return execSync(`osascript -e '${restartScript}'`).toString();
+  }
 
-  // TODO: implement restart
+  throw new Error(
+    `Restarting Claude Desktop is not supported on this platform: ${process.platform}`
+  );
 }
 
 /**
@@ -66,7 +91,9 @@ export async function restartClaudeDesktop() {
  */
 export function watchClaudeDesktopConfig(mainWindow: BrowserWindow) {
   if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
-    console.error(`Claude Desktop App config file not found at '${CLAUDE_DESKTOP_CONFIG_PATH}'`);
+    console.error(
+      `Claude Desktop App config file not found at '${CLAUDE_DESKTOP_CONFIG_PATH}'`
+    );
     return false;
   }
 
