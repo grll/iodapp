@@ -2,7 +2,7 @@
   "name": "iodapp",
   "productName": "iod",
   "version": "0.0.1",
-  "description": "simplify discovery and installation of MCP servers",
+  "description": "discover and install MCP servers",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
@@ -45,6 +45,7 @@
   },
   "license": "UNLICENSED",
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-toast": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
