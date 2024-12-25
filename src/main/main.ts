@@ -51,7 +51,9 @@ const createWindow = () => {
 
   const unwatch = watchClaudeDesktopConfig(mainWindow);
   mainWindow.on("close", () => {
-    unwatch();
+    if (unwatch) {
+      unwatch();
+    }
   });
 };
 

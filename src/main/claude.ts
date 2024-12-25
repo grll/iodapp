@@ -27,7 +27,7 @@ const CONFIG_PATHS = {
   ),
 };
 if (!(process.platform in CONFIG_PATHS)) {
-  throw new Error(`Unsupported platform: ${process.platform}`);
+  throw new Error(`Unsupported platform. Claude Desktop App config path for platform '${process.platform}' not found.`);
 }
 const CLAUDE_DESKTOP_CONFIG_PATH =
   CONFIG_PATHS[process.platform as keyof typeof CONFIG_PATHS];
@@ -37,6 +37,11 @@ if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
   writeFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "{}");
 }
 
+/**
+ * Writes a MCP server config to the config file
+ * @param serverName - the name of the server
+ * @param serverConfig - the config to write
+ */
 export async function writeMCPServerConfig(
   serverName: string,
   serverConfig: MCPServerConfig
@@ -45,11 +50,26 @@ export async function writeMCPServerConfig(
   // TODO: implement setMCPConfig
 }
 
+/**
+ * Restarts the Claude Desktop app
+ */
 export async function restartClaudeDesktop() {
+
   // TODO: implement restart
 }
 
+/**
+ * Watches the Claude Desktop config file and sends a message to the main window when it changes.
+ * In case of error reading or parsing the config file, it sends an error message to the main window using the 'config-error' channel.
+ * @param mainWindow - the main window
+ * @returns a function to unwatch the config file
+ */
 export function watchClaudeDesktopConfig(mainWindow: BrowserWindow) {
+  if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
+    console.error(`Claude Desktop App config file not found at '${CLAUDE_DESKTOP_CONFIG_PATH}'`);
+    return false;
+  }
+
   const watcher = watch(CLAUDE_DESKTOP_CONFIG_PATH);
 
   watcher.on("change", (event) => {
