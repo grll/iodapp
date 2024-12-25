@@ -1,4 +1,9 @@
+import path from "node:path";
+import os from "node:os";
+import fs, { existsSync, mkdirSync } from "node:fs";
+import http from "isomorphic-git/http/node";
 import { BrowserWindow } from "electron";
+import { clone } from "isomorphic-git";
 
 import {
   writeMCPServerConfig,
@@ -15,6 +20,12 @@ type InstallConfig = {
     commit: string;
   };
 };
+
+// home directory of the iod app stores git clone and other app data.
+const IOD_HOME = path.join(os.homedir(), ".iod");
+if (!existsSync(IOD_HOME)) {
+  mkdirSync(IOD_HOME, { recursive: true });
+}
 
 /**
  * Parses the install config from a iod.ai url: iod://b64encodedjson
@@ -43,8 +54,18 @@ function parseInstallConfigUrl(url: string) {
  * @param commit - The commit to clone
  */
 async function gitClone(repoUrl: string, commit: string) {
-  console.log("gitClone", repoUrl, commit);
-  // TODO: implement git clone
+  const repoName = repoUrl.split("/").pop();
+  const repoDir = path.join(IOD_HOME, repoName);
+
+  await clone({
+    fs,
+    http,
+    dir: repoDir,
+    url: repoUrl,
+    ref: commit,
+    singleBranch: true,
+    depth: 1,
+  });
 }
 
 /**
