@@ -40,7 +40,7 @@ export function Instructions() {
               </span>
               <div className="flex-1 pt-1">
                 Click &apos;Install&apos; on your selected server and follow the
-                setup wizard.
+                setup wizard on the website.
               </div>
             </li>
 
@@ -49,7 +49,7 @@ export function Instructions() {
                 3
               </span>
               <div className="flex-1 pt-1">
-                Click &apos;Auto-Install (macOS)&apos;. iod will install the
+                Click &apos;Auto-Install (macOS)&apos;. This application will install the
                 server and restart Claude Desktop app.
               </div>
             </li>
