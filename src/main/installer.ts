@@ -126,10 +126,10 @@ function updateUVArgs(
   args: string[],
   repoDir?: string
 ) {
-  const uvIndex = args.indexOf("uv");
-  if (uvIndex === -1) return;
-
   const returnedArgs = Array.from(args)
+
+  const uvIndex = args.indexOf("uv");
+  if (uvIndex === -1) return returnedArgs;
 
   // Replace directory path with cloned directory if necessary
   const directoryFlagIndex = args.indexOf("--directory", uvIndex);
@@ -157,10 +157,10 @@ function updateUVArgs(
  * @returns A new args array updated 
  */
 function updateUVXArgs(args: string[]) {
-  const uvxIndex = args.indexOf("uvx");
-  if (uvxIndex === -1) return;
-
   const returnedArgs = Array.from(args)
+
+  const uvxIndex = args.indexOf("uvx");
+  if (uvxIndex === -1) return returnedArgs;
 
   // if using uvx we set uvx python to 3.12 as it's the most commonly supported version
   // it will also force uvx to install and use python 3.12.
@@ -202,6 +202,7 @@ function fixConfig(config: MCPServerConfig, repoDir?: string) {
   let { args } = config
   args = updateUVArgs(args, repoDir)
   args = updateUVXArgs(args)
+
   // TODO: update npm / npx args with fnm
   fixedConfig.args = args
 
