@@ -1,21 +1,40 @@
+// ============================
+// Imports
+// ============================
+
 import { watch, readFileSync, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
 import { BrowserWindow } from "electron";
 
+// ============================
+// Type Definitions
+// ============================
+
+/**
+ * The config object for a MCP server.
+ */
 export type MCPServerConfig = {
   command: string;
   args: string[];
   env: Record<string, string>;
 };
 
+/**
+ * The config file format for the Claude Desktop App.
+ */
 export type ClaudeDesktopConfig = {
   mcpServers: {
     [serverName: string]: MCPServerConfig;
   };
+  // we don't know what other fields are in the config file, so we add a catch-all field
   [key: string]: unknown;
 };
+
+// ============================
+// Constants
+// ============================
 
 // set CLAUDE_DESKTOP_CONFIG_PATH to point to the config.json file based on the platform
 const CONFIG_PATHS = {
@@ -27,18 +46,39 @@ const CONFIG_PATHS = {
     "claude_desktop_config.json"
   ),
 };
-if (!(process.platform in CONFIG_PATHS)) {
-  throw new Error(
-    `Unsupported platform. Claude Desktop App config path for platform '${process.platform}' not found.`
-  );
+
+// ============================
+// Utility Functions
+// ============================
+
+/**
+ * Gets the absolute path to the Claude Desktop App config file based on the platform.
+ * @returns the config path
+ * @throws an error if the platform is not supported
+ */
+function getConfigPath() {
+  if (!(process.platform in CONFIG_PATHS)) {
+    throw new Error(
+      `Unsupported platform. Claude Desktop App config path for platform '${process.platform}' not found.`
+    );
+  }
+  return CONFIG_PATHS[process.platform as keyof typeof CONFIG_PATHS];
 }
-const CLAUDE_DESKTOP_CONFIG_PATH =
-  CONFIG_PATHS[process.platform as keyof typeof CONFIG_PATHS];
+
+/**
+ * The absolute path to the Claude Desktop App config file.
+ */
+const CLAUDE_DESKTOP_CONFIG_PATH = getConfigPath();
 
 // if config path does not exist, create it
+// we assume it exists in the rest of the codebase.
 if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
   writeFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "{}");
 }
+
+// ============================
+// Exported Functions
+// ============================
 
 /**
  * Writes a MCP server config to the config file
@@ -61,6 +101,8 @@ export function writeMCPServerConfig(
 /**
  * Restarts the Claude Desktop app
  * @returns the output of the restart command (stdout)
+ * @throws an error if the platform is not supported
+ * @throws an error if the restart command fails
  */
 export function restartClaudeDesktop() {
   if (process.platform !== "darwin") {
