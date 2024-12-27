@@ -86,7 +86,7 @@ async function gitClone(repoUrl: string, commit: string, repoName: string) {
     depth: 1,
   });
 
-  return repoDir
+  return repoDir;
 }
 
 /**
@@ -96,9 +96,19 @@ async function gitClone(repoUrl: string, commit: string, repoName: string) {
  * @throws Error if the returned path is not found
  */
 function resolveBinaryPath(binary: string) {
-  let basePath = path.join(__dirname, '..', '..');
+  let execFolderPath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "binaries",
+    process.platform,
+    process.arch
+  );
   if (app.isPackaged) {
-    basePath = path.join(app.getAppPath());
+    // when packaged, the binaries are in the Resources folder of the app
+    // we have to follow the way forge package the app to find the binaries
+    // in this case it keeps the arch but not the rest like: Resources/x64/uv
+    execFolderPath = path.join(process.resourcesPath, process.arch);
   }
 
   let execName = binary;
@@ -106,7 +116,7 @@ function resolveBinaryPath(binary: string) {
     execName += ".exe";
   }
 
-  const binaryPath = path.join(basePath, "binaries", process.platform, process.arch, execName);
+  const binaryPath = path.join(execFolderPath, execName);
   if (!existsSync(binaryPath)) {
     throw new Error(`Binary ${binary} not found in ${binaryPath}`);
   }
@@ -116,17 +126,14 @@ function resolveBinaryPath(binary: string) {
 
 /**
  * Updates a MCP server arguments related to 'uv'. (if using 'uv', noop otherwise)
- * set python version with '--python' and fix '--directory' arg with the cloned repo path. 
+ * set python version with '--python' and fix '--directory' arg with the cloned repo path.
  * @param args - The args of the MCP server config
  * @param repoDir? - Absolute path to the cloned repository for that MCP server.
- * @returns A new args array updated 
+ * @returns A new args array updated
  * @throws Error if using uv --directory and repoDir is not provided.
  */
-function updateUVArgs(
-  args: string[],
-  repoDir?: string
-) {
-  const returnedArgs = Array.from(args)
+function updateUVArgs(args: string[], repoDir?: string) {
+  const returnedArgs = Array.from(args);
 
   const uvIndex = args.indexOf("uv");
   if (uvIndex === -1) return returnedArgs;
@@ -139,7 +146,7 @@ function updateUVArgs(
         "MCP Config is using uv --directory option but no path to a cloned repository directory was provided."
       );
     }
-    returnedArgs[directoryFlagIndex + 1] = repoDir
+    returnedArgs[directoryFlagIndex + 1] = repoDir;
   }
 
   // we set python to 3.12 when using uv because it's the most compatible version today
@@ -147,17 +154,17 @@ function updateUVArgs(
   // which causes incompatibility error at runtime. This reduces it.
   returnedArgs.splice(uvIndex + 1, 0, "--python", "3.12");
 
-  return returnedArgs
+  return returnedArgs;
 }
 
 /**
  * Updates a MCP server arguments related to 'uvx'. (if using 'uvx', noop otherwise)
- * set python version with '--python'. 
+ * set python version with '--python'.
  * @param args - The args of the MCP server config
- * @returns A new args array updated 
+ * @returns A new args array updated
  */
 function updateUVXArgs(args: string[]) {
-  const returnedArgs = Array.from(args)
+  const returnedArgs = Array.from(args);
 
   const uvxIndex = args.indexOf("uvx");
   if (uvxIndex === -1) return returnedArgs;
@@ -166,7 +173,7 @@ function updateUVXArgs(args: string[]) {
   // it will also force uvx to install and use python 3.12.
   returnedArgs.splice(uvxIndex + 1, 0, "--python", "3.12");
 
-  return returnedArgs
+  return returnedArgs;
 }
 
 /**
@@ -176,7 +183,7 @@ function updateUVXArgs(args: string[]) {
  */
 function replaceBinaries(config: MCPServerConfig) {
   const binaries = ["uv", "uvx"];
-  const returnedConfig = structuredClone(config)
+  const returnedConfig = structuredClone(config);
 
   if (binaries.includes(config.command)) {
     returnedConfig.command = resolveBinaryPath(config.command);
@@ -186,30 +193,30 @@ function replaceBinaries(config: MCPServerConfig) {
     binaries.includes(arg) ? resolveBinaryPath(arg) : arg
   );
 
-  return returnedConfig
+  return returnedConfig;
 }
 
 /**
  * Fixes the MCP server config (paths, python / node version, ...)
  * @param config - The config to fix
- * @param repoDir? - Must be provided when the MCP server was cloned. 
+ * @param repoDir? - Must be provided when the MCP server was cloned.
  * It will be used to set --directory for uv or --prefix for npm.
  * @returns The fixed config
  */
 function fixConfig(config: MCPServerConfig, repoDir?: string) {
-  let fixedConfig = structuredClone(config)
+  let fixedConfig = structuredClone(config);
 
-  let { args } = config
-  args = updateUVArgs(args, repoDir)
-  args = updateUVXArgs(args)
+  let { args } = config;
+  args = updateUVArgs(args, repoDir);
+  args = updateUVXArgs(args);
 
   // TODO: update npm / npx args with fnm
-  fixedConfig.args = args
+  fixedConfig.args = args;
 
   // we replace binaries with binaries shipped with the app
   // to reduce dependencies on the user's system to a minimum
   // uv takes care of installing python env, fnm takes care of installing node/npm
-  fixedConfig = replaceBinaries(fixedConfig)
+  fixedConfig = replaceBinaries(fixedConfig);
   return fixedConfig;
 }
 
@@ -229,7 +236,7 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
   try {
     const installConfig = parseInstallConfigUrl(url);
 
-    let repoDir: string | undefined = undefined
+    let repoDir: string | undefined = undefined;
     if (installConfig.git) {
       const { repo_url: repoUrl, commit } = installConfig.git;
       const repoName = repoUrl.split("/").pop();
