@@ -105,7 +105,7 @@ export function writeMCPServerConfig(
  * @throws an error if the restart command fails
  */
 export function restartClaudeDesktop() {
-  if (process.platform !== "darwin") {
+  if (process.platform === "darwin") {
     const restartScript = `
       tell application "Claude"
         if its running then
