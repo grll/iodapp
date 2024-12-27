@@ -44,8 +44,9 @@ function createWindow() {
   });
 
   // Load the appropriate URL based on the environment.
-  const devServerURL = process.env.MAIN_WINDOW_VITE_DEV_SERVER_URL;
-  const viteName = process.env.MAIN_WINDOW_VITE_NAME;
+  // variables are set at build time by vite.
+  const devServerURL = MAIN_WINDOW_VITE_DEV_SERVER_URL;
+  const viteName = MAIN_WINDOW_VITE_NAME;
   if (devServerURL) {
     mainWindow.loadURL(devServerURL);
   } else if (viteName) {
