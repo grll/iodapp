@@ -14,7 +14,11 @@ import {
   deleteMCPServer,
 } from "./claude";
 
-import { type IpcInvokeChannels, type Handlers, createIpcHandler } from "../shared/ipc";
+import {
+  type IpcInvokeChannels,
+  type Handlers,
+  createIpcHandler,
+} from "../shared/ipc";
 
 // we use iod:// protocol to send data from iod.ai to the app.
 const PROTOCOL_PREFIX = "iod";
@@ -31,10 +35,14 @@ let mainWindow: BrowserWindow;
  * @param handlers - The handlers to register.
  */
 function registerIpcHandlers(handlers: Handlers) {
-  Object.entries(handlers).forEach(([channel, handler]) => {
-    const channelName = channel as keyof IpcInvokeChannels;
-    const ipcHandler = createIpcHandler<typeof channelName>(handler);
-    ipcMain.handle(channelName, (_event, args) => ipcHandler(args));
+  (
+    Object.entries(handlers) as Array<
+      [keyof IpcInvokeChannels, Handlers[keyof IpcInvokeChannels]]
+    >
+  ).forEach(([channel, handler]) => {
+    // @ts-expect-error: typing here could be improved.
+    const ipcHandler = createIpcHandler<typeof channel>(handler);
+    ipcMain.handle(channel, (_event, args) => ipcHandler(args));
   });
 }
 
@@ -90,10 +98,6 @@ function createWindow() {
   } else {
     throw new Error("MAIN_WINDOW_VITE_NAME is not defined.");
   }
-
-  // Open the DevTools.
-  // TODO: remove this in PROD
-  mainWindow.webContents.openDevTools();
 
   // Watch for config changes.
   const unwatch = watchClaudeDesktopConfig(mainWindow);
