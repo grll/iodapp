@@ -20,8 +20,21 @@ export interface MainToRendererSendChannels {
    * This should be displayed in a toast notification to the user.
    */
   notify: {
+    /**
+     * The type of the notification.
+     * Can be used to change notification style.
+     */
     type: "error" | "info" | "success";
+
+    /**
+     * An optional title for the notification.
+     * If not provided, the renderer process should define a default.
+     */
     title?: string;
+
+    /**
+     * The message of the notification to be displayed to the user.
+     */
     message: string;
   };
 
