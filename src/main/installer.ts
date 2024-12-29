@@ -1,3 +1,8 @@
+/**
+ * Installer module for the main process.
+ * It handles the installation of MCP servers from a given base64 iod.ai url.
+ */
+
 // ============================
 // Imports
 // ============================
@@ -8,6 +13,11 @@ import fs, { existsSync, mkdirSync } from "node:fs";
 import http from "isomorphic-git/http/node";
 import { BrowserWindow, app } from "electron";
 import { clone } from "isomorphic-git";
+
+import { AppError } from "../shared/error";
+import { logger } from "../shared/logger";
+import { sendToWindow } from "../shared/ipc";
+import { DISCORD_URL } from "../shared/constants";
 
 import {
   writeMCPServerConfig,
@@ -49,21 +59,30 @@ if (!existsSync(IOD_HOME)) {
  * Parses the install config from a iod.ai url: iod://b64encodedjson
  * @param url - a iod.ai url to parse
  * @returns The install config see InstallConfig type
- * @throws Error if the install config is invalid
+ * @throws AppError if the install config is invalid or couldnt be parsed
  */
 function parseInstallConfigUrl(url: string) {
-  const base64Data = url.replace("iod://", "");
-  const jsonStr = Buffer.from(base64Data, "base64").toString("utf-8");
-  const installConfig = JSON.parse(jsonStr) as InstallConfig;
+  try {
+    const base64Data = url.replace("iod://", "");
+    const jsonStr = Buffer.from(base64Data, "base64").toString("utf-8");
+    const installConfig = JSON.parse(jsonStr) as InstallConfig;
 
-  // for now we only support one mcp server to be installed at a time.
-  if (Object.keys(installConfig.config).length !== 1) {
-    throw new Error(
-      "Invalid install config: number of servers in config must be 1"
-    );
+    // for now we only support one mcp server to be installed at a time.
+    if (Object.keys(installConfig.config).length !== 1) {
+      throw new Error(
+        "Invalid install config: number of servers in config must be exactly 1"
+      );
+    }
+
+    return installConfig;
+  } catch (error) {
+    throw new AppError({
+      developerMessage: `Failed to parse b64 data from '${url}' or invalid config send through 'iod://' protocol.`,
+      userMessage: `We couldn't validate the install configuration for the MCP server.
+      Join our discord for support: ${DISCORD_URL}`,
+      originalError: error as Error,
+    });
   }
-
-  return installConfig;
 }
 
 /**
@@ -74,7 +93,8 @@ function parseInstallConfigUrl(url: string) {
  * @returns The path to the directory created
  */
 async function gitClone(repoUrl: string, commit: string, repoName: string) {
-  const repoDir = path.join(IOD_HOME, repoName);
+  try {
+    const repoDir = path.join(IOD_HOME, repoName);
 
   await clone({
     fs,
@@ -86,7 +106,15 @@ async function gitClone(repoUrl: string, commit: string, repoName: string) {
     depth: 1,
   });
 
-  return repoDir;
+    return repoDir;
+  } catch (error) {
+    throw new AppError({
+      developerMessage: `Failed to clone the git repository ${repoUrl} at commit ${commit}.`,
+      userMessage: `We couldn't download the MCP server '${repoName}' on your computer.
+      Join our discord for support: ${DISCORD_URL}`,
+      originalError: error as Error,
+    });
+  }
 }
 
 /**
@@ -233,8 +261,10 @@ function fixConfig(config: MCPServerConfig, repoDir?: string) {
  * @param mainWindow - The main window of the app to send messages to
  */
 export async function install(url: string, mainWindow?: BrowserWindow) {
+  let serverName: string | undefined = undefined;
   try {
     const installConfig = parseInstallConfigUrl(url);
+    serverName = Object.keys(installConfig.config)[0];
 
     let repoDir: string | undefined = undefined;
     if (installConfig.git) {
@@ -243,25 +273,38 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
       repoDir = await gitClone(repoUrl, commit, repoName);
     }
 
-    const serverName = Object.keys(installConfig.config)[0];
     const serverConfig = installConfig.config[serverName];
     const fixedServerConfig = fixConfig(serverConfig, repoDir);
     writeMCPServerConfig(serverName, fixedServerConfig);
     restartClaudeDesktop();
 
     if (mainWindow) {
-      mainWindow.webContents.send(
-        "install-success",
-        `Successfully installed ${serverName} in your Claude Desktop App.`
-      );
+      sendToWindow(mainWindow, 'notify', {
+        type: 'success',
+        title: "MCP Server Installation Success",
+        message: `Successfully installed ${serverName} in your Claude Desktop App.`
+      });
     }
   } catch (error) {
-    if (mainWindow) {
-      mainWindow.webContents.send(
-        "install-error",
-        "Failed to install the MCP server in your Claude Desktop App."
-      );
+    if (error instanceof AppError) {
+      logger.error(error.message, error.originalError);
+      if (mainWindow) {
+        sendToWindow(mainWindow, 'notify', {
+          type: 'error',
+          title: "MCP Server Installation Error",
+          message: error.userMessage
+        });
+      }
+    } else {
+      logger.error("Unknown error during MCP server installation", error);
+      if (mainWindow) {
+        sendToWindow(mainWindow, 'notify', {
+          type: 'error',
+          title: "MCP Server Installation Error",
+          message: `Failed to install the MCP server '${serverName || "unknown"}' in your Claude Desktop App.
+          Join our discord for more support: ${DISCORD_URL}`
+        });
+      }
     }
-    console.error(error);
   }
 }

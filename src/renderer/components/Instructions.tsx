@@ -1,54 +1,8 @@
-import { useEffect } from "react";
-
-import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 
 export function Instructions() {
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const unlisten = window.installer.onInstallError((error) => {
-      toast({
-        title: "Install Error",
-        description: error,
-        variant: "destructive",
-      });
-    });
-
-    return () => {
-      unlisten();
-    };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = window.installer.onInstallSuccess((message) => {
-      toast({
-        title: "Install Success",
-        description: message,
-      });
-    });
-
-    return () => {
-      unlisten();
-    };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = window.claude.onConfigError((error) => {
-      toast({
-        title: "Config Error",
-        description: error,
-        variant: "destructive",
-      });
-    });
-
-    return () => {
-      unlisten();
-    };
-  }, []);
-
   return (
     <div className="flex items-center justify-center bg-background p-4">
       <Card className="max-w-2xl w-full">

@@ -1,3 +1,8 @@
+/**
+ * Claude module for the main process.
+ * It handles interactions with the Claude Desktop App in the main process.
+ */
+
 // ============================
 // Imports
 // ============================
@@ -6,8 +11,13 @@ import { watch, readFileSync, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
-import { BrowserWindow } from "electron";
 
+import type { BrowserWindow } from "electron";
+
+import { AppError } from "../shared/error";
+import { logger } from "../shared/logger";
+import { sendToWindow } from "../shared/ipc";
+import { DISCORD_URL } from "../shared/constants";
 // ============================
 // Type Definitions
 // ============================
@@ -84,18 +94,30 @@ if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
  * Writes a MCP server config to the config file
  * @param serverName - the name of the server
  * @param serverConfig - the config to write
+ * @throws an AppError if the server is not found or the config file is not found or is not a valid JSON file
  */
 export function writeMCPServerConfig(
   serverName: string,
   serverConfig: MCPServerConfig
 ) {
-  const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
-  const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
-  jsonConfig.mcpServers[serverName] = serverConfig;
-  writeFileSync(
-    CLAUDE_DESKTOP_CONFIG_PATH,
-    JSON.stringify(jsonConfig, null, 2)
-  );
+  try {
+    const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
+    const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
+    jsonConfig.mcpServers[serverName] = serverConfig;
+    writeFileSync(
+      CLAUDE_DESKTOP_CONFIG_PATH,
+      JSON.stringify(jsonConfig, null, 2)
+    );
+  } catch (error) {
+    throw new AppError({
+      developerMessage:
+        "Failed to write MCP server config to the Claude Desktop App config file.",
+      userMessage: `We failed to write MCP server '${serverName}' to your Claude Desktop App config file.
+      We might not have proper access to the config file or the config file could be wrongly formatted.
+      Join our discord for support: ${DISCORD_URL}`,
+      originalError: error as Error,
+    });
+  }
 }
 
 /**
@@ -129,7 +151,7 @@ export function restartClaudeDesktop() {
  * Watches the Claude Desktop config file and sends a message to the main window when it changes.
  * In case of error reading or parsing the config file, it sends an error message to the main window using the 'config-error' channel.
  * @param mainWindow - the main window
- * @returns a function to unwatch the config file
+ * @returns a function to unwatch the config file or false if the config file does not exist.
  */
 export function watchClaudeDesktopConfig(mainWindow: BrowserWindow) {
   if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
@@ -147,17 +169,78 @@ export function watchClaudeDesktopConfig(mainWindow: BrowserWindow) {
     try {
       const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
       const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
-      mainWindow.webContents.send("config-changed", jsonConfig);
+      sendToWindow(mainWindow, "claude:config-changed", { config: jsonConfig });
     } catch (error) {
-      mainWindow.webContents.send(
-        "config-error",
-        "We detected a change in Claude Desktop App config but failed to read it. Your config might be wrongly formatted or iod do not have access to the config file."
+      logger.error(
+        "Failed to read / parse the Claude Desktop App config file",
+        error as Error
       );
-      console.error(error);
+      sendToWindow(mainWindow, "notify", {
+        type: "error",
+        title: "Claude Desktop App Config Error",
+        message: `We detected a change in your Claude Desktop App config but failed to read it.
+          Your config might be wrongly formatted or we do not have access to the config file.
+          Join our discord for support: ${DISCORD_URL}`,
+      });
     }
   });
 
   return () => {
     watcher.close();
   };
+}
+
+/**
+ * Gets the MCP servers from the Claude Desktop App config file.
+ * @returns the MCP servers
+ * @throws An AppError if the config file is not found or is not a valid JSON file
+ */
+export function getMCPServers() {
+  try {
+    const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
+    const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
+
+    // initially, the config file might not have the mcpServers field.
+    if (!jsonConfig.mcpServers) {
+      return {};
+    }
+
+    return jsonConfig.mcpServers;
+  } catch (error) {
+    throw new AppError({
+      developerMessage:
+        "Failed to read or parse the Claude Desktop App config file.",
+      userMessage: `We failed to retrieve MCP servers from your Claude Desktop App config file.
+      We might not have access to the config file or the config file could be wrongly formatted.
+      Join our discord for support: ${DISCORD_URL}
+      `,
+      originalError: error as Error,
+    });
+  }
+}
+
+/**
+ * Deletes an MCP server from the Claude Desktop App config file.
+ * @param serverName - the name of the server to delete
+ * @throws an AppError if the server is not found or the config file is not found or is not a valid JSON file
+ */
+export function deleteMCPServer({ serverName }: { serverName: string }) {
+  try {
+    const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
+    const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
+    delete jsonConfig.mcpServers[serverName];
+    writeFileSync(
+      CLAUDE_DESKTOP_CONFIG_PATH,
+      JSON.stringify(jsonConfig, null, 2)
+    );
+  } catch (error) {
+    throw new AppError({
+      developerMessage:
+        "Failed to delete MCP server from the Claude Desktop App config file.",
+      userMessage: `We failed to delete MCP server '${serverName}' from your Claude Desktop App config file.
+      We might not have access to the config file or the config file could be wrongly formatted.
+      Join our discord for support: ${DISCORD_URL}`,
+      originalError: error as Error,
+    });
+  }
 }

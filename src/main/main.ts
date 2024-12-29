@@ -1,9 +1,20 @@
-import { app, BrowserWindow } from "electron";
+/**
+ * Main module for the main process.
+ * It handles the main application logic and interactions with the electron API.
+ */
+
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import started from "electron-squirrel-startup";
 
 import { install } from "./installer";
-import { watchClaudeDesktopConfig } from "./claude";
+import {
+  watchClaudeDesktopConfig,
+  getMCPServers,
+  deleteMCPServer,
+} from "./claude";
+
+import { type IpcInvokeChannels, type Handlers, createIpcHandler } from "../shared/ipc";
 
 // we use iod:// protocol to send data from iod.ai to the app.
 const PROTOCOL_PREFIX = "iod";
@@ -14,6 +25,29 @@ if (started) {
 }
 
 let mainWindow: BrowserWindow;
+
+/**
+ * Registers IPC handlers for the given handlers.
+ * @param handlers - The handlers to register.
+ */
+function registerIpcHandlers(handlers: Handlers) {
+  Object.entries(handlers).forEach(([channel, handler]) => {
+    const channelName = channel as keyof IpcInvokeChannels;
+    const ipcHandler = createIpcHandler<typeof channelName>(handler);
+    ipcMain.handle(channelName, (_event, args) => ipcHandler(args));
+  });
+}
+
+/**
+ * Unregisters IPC handlers for the given handlers.
+ * @param handlers - The handlers to unregister.
+ */
+function unregisterIpcHandlers(handlers: Handlers) {
+  Object.keys(handlers).forEach((channel) => {
+    const channelName = channel as keyof IpcInvokeChannels;
+    ipcMain.removeHandler(channelName);
+  });
+}
 
 /**
  * Registers the iod:// protocol with the application.
@@ -68,6 +102,23 @@ function createWindow() {
       unwatch();
     }
   });
+
+  // register IPC handlers
+  /**
+   * Connect IPC Invoke channels to handlers (Pure unwrapped functions).
+   * Ideally, handlers should throw AppError to avoir unexpected errors.
+   * This is type safe and ensures that all defined IPC channels are handled.
+   * @see {@link ../ipc#createIpcHandler} for more details on how handlers are wrapped.
+   */
+  const handlers: Handlers = {
+    "claude:get-mcp-servers": getMCPServers,
+    "claude:delete-mcp-server": deleteMCPServer,
+  };
+  registerIpcHandlers(handlers);
+
+  mainWindow.on("close", () => {
+    unregisterIpcHandlers(handlers);
+  });
 }
 
 /**
@@ -80,7 +131,7 @@ function handleSecondInstance(commandLine: string[]) {
     mainWindow.focus();
   }
 
-  const url = commandLine.pop()?.replace(/\/$/, ''); // Remove trailing slash if any
+  const url = commandLine.pop()?.replace(/\/$/, ""); // Remove trailing slash if any
   if (url) {
     install(url, mainWindow);
   }
@@ -116,7 +167,7 @@ if (!gotTheLock) {
   });
 
   // Quit when all windows are closed, except on macOS.
-  // There, it's common for applications and their menu bar to stay active 
+  // There, it's common for applications and their menu bar to stay active
   // until the user quits explicitly with Cmd + Q.
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
