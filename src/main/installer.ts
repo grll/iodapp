@@ -270,6 +270,9 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
     if (installConfig.git) {
       const { repo_url: repoUrl, commit } = installConfig.git;
       const repoName = repoUrl.split("/").pop();
+      if (!repoName) {
+        throw new Error("Failed to get repository name from url");
+      }
       repoDir = await gitClone(repoUrl, commit, repoName);
     }
 
@@ -296,7 +299,7 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
         });
       }
     } else {
-      logger.error("Unknown error during MCP server installation", error);
+      logger.error("Unknown error during MCP server installation", error as Error);
       if (mainWindow) {
         sendToWindow(mainWindow, 'notify', {
           type: 'error',
