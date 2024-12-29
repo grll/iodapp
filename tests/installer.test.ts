@@ -140,7 +140,11 @@ test("install clones the repo and writes the correct config", async () => {
 
   // Verify IPC message for success was sent
   expect(mockMainWindow.webContents.send).toHaveBeenCalledWith(
-    "install-success",
-    `Successfully installed spotify in your Claude Desktop App.`
+    "notify",
+    {
+      type: "success",
+      title: "MCP Server Installation Success",
+      message: `Successfully installed spotify in your Claude Desktop App.`
+    }
   );
 });
