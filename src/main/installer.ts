@@ -197,10 +197,6 @@ function updateUVXArgs(args: string[]) {
   const uvxIndex = args.indexOf("uvx");
   if (uvxIndex === -1) return returnedArgs;
 
-  // if using uvx we set uvx python to 3.12 as it's the most commonly supported version
-  // it will also force uvx to install and use python 3.12.
-  returnedArgs.splice(uvxIndex + 1, 0, "--python", "3.12");
-
   return returnedArgs;
 }
 
