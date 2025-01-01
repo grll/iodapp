@@ -1,6 +1,3 @@
-import { config as dotenvConfig } from "dotenv";
-dotenvConfig();
-
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
@@ -10,17 +7,22 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+import { config as dotenvConfig } from "dotenv";
+
+dotenvConfig();
+if (!process.env.APPLE_ID || !process.env.APPLE_PASSWORD || !process.env.APPLE_TEAM_ID) {
+  throw new Error("Missing Apple ID, password, or team ID");
+}
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    /*
     osxSign: {},
     osxNotarize: {
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_PASSWORD,
       teamId: process.env.APPLE_TEAM_ID,
     },
-    */
     icon: "./images/icon",
     protocols: [
       {
