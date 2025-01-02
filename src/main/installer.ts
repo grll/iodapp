@@ -201,7 +201,7 @@ function updateUVXArgs(args: string[]) {
  * @returns A new config with updated binaries
  */
 function replaceBinaries(config: MCPServerConfig) {
-  const binaries = ["uv", "uvx"];
+  const binaries = ["uv", "uvx", "fnm", "fnmx"];
   const returnedConfig = structuredClone(config);
 
   if (binaries.includes(config.command)) {
