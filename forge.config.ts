@@ -14,15 +14,28 @@ if (!process.env.APPLE_ID || !process.env.APPLE_PASSWORD || !process.env.APPLE_T
   throw new Error("Missing Apple ID, password, or team ID");
 }
 
+// Updated argument parsing
+const platformIndex = process.argv.indexOf('--platform');
+const archIndex = process.argv.indexOf('--arch');
+
+const targetPlatform = platformIndex !== -1 ? process.argv[platformIndex + 1] : process.platform;
+const targetArch = archIndex !== -1 ? process.argv[archIndex + 1] : process.arch;
+
+console.log(process.argv);
+console.log(`Target platform: ${targetPlatform}`);
+console.log(`Target arch: ${targetArch}`);
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    /*
     osxSign: {},
     osxNotarize: {
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_PASSWORD,
       teamId: process.env.APPLE_TEAM_ID,
     },
+    */
     icon: "./images/icon",
     protocols: [
       {
@@ -31,7 +44,7 @@ const config: ForgeConfig = {
       },
     ],
     extraResource: [
-      `binaries/${process.platform}/${process.arch}`,
+      `binaries/${targetPlatform}/${targetArch}`,
     ],
   },
   rebuildConfig: {},
