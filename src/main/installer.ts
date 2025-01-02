@@ -177,11 +177,6 @@ function updateUVArgs(args: string[], repoDir?: string) {
     returnedArgs[directoryFlagIndex + 1] = repoDir;
   }
 
-  // we set python to 3.12 when using uv because it's the most compatible version today
-  // uv resolves python first before the package required python version is resolved
-  // which causes incompatibility error at runtime. This reduces it.
-  returnedArgs.splice(uvIndex + 1, 0, "--python", "3.12");
-
   return returnedArgs;
 }
 
