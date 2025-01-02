@@ -154,7 +154,7 @@ function resolveBinaryPath(binary: string) {
 
 /**
  * Updates a MCP server arguments related to 'uv'. (if using 'uv', noop otherwise)
- * set python version with '--python' and fix '--directory' arg with the cloned repo path.
+ * fix '--directory' arg with the cloned repo path.
  * @param args - The args of the MCP server config
  * @param repoDir? - Absolute path to the cloned repository for that MCP server.
  * @returns A new args array updated
@@ -182,7 +182,6 @@ function updateUVArgs(args: string[], repoDir?: string) {
 
 /**
  * Updates a MCP server arguments related to 'uvx'. (if using 'uvx', noop otherwise)
- * set python version with '--python'.
  * @param args - The args of the MCP server config
  * @returns A new args array updated
  */
@@ -191,6 +190,25 @@ function updateUVXArgs(args: string[]) {
 
   const uvxIndex = args.indexOf("uvx");
   if (uvxIndex === -1) return returnedArgs;
+
+  return returnedArgs;
+}
+
+/**
+ * Updates a MCP server arguments related to 'npx'. (if using 'npx', noop otherwise)
+ * add fnmx with node v22 which will install (if necessary) and use node v22.
+ * @param args - The args of the MCP server config
+ * @returns A new args array updated
+ * @throws Error if using npm --directory and repoDir is not provided.
+ */
+function updateNPXArgs(args: string[]) {
+  const returnedArgs = Array.from(args);
+
+  const npxIndex = args.indexOf("npx");
+  if (npxIndex === -1) return returnedArgs;
+
+  // add fnmx with node v22 which will install (if necessary) and use node v22.
+  returnedArgs.splice(npxIndex - 1, 0, "fnmx", "v22");
 
   return returnedArgs;
 }
@@ -228,8 +246,8 @@ function fixConfig(config: MCPServerConfig, repoDir?: string) {
   let { args } = config;
   args = updateUVArgs(args, repoDir);
   args = updateUVXArgs(args);
+  args = updateNPXArgs(args);
 
-  // TODO: update npm / npx args with fnm
   fixedConfig.args = args;
 
   // we replace binaries with binaries shipped with the app
