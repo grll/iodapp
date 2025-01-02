@@ -121,8 +121,6 @@ test("install clones the repo and writes the correct config", async () => {
     args: expect.arrayContaining([
       "omproxy@latest",
       expect.stringContaining("uv"), // Resolved binary path for 'uv'
-      "--python",
-      "3.12",
       "--directory",
       path.join(IOD_HOME, repoName),
       "run",
