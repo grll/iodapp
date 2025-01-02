@@ -208,7 +208,7 @@ function updateNPXArgs(args: string[]) {
   if (npxIndex === -1) return returnedArgs;
 
   // add fnmx with node v22 which will install (if necessary) and use node v22.
-  returnedArgs.splice(npxIndex - 1, 0, "fnmx", "v22");
+  returnedArgs.splice(npxIndex, 0, "fnmx", "v22");
 
   return returnedArgs;
 }
