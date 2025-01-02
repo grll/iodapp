@@ -1,15 +1,24 @@
+import log from 'electron-log';
+
 /**
- * logger: A simple wrapper for logging errors.
- * You can plug in 'electron-log', 'winston', or any other logging lib.
+ * logger: A wrapper for electron-log.
+ * Logs will appear in the following locations:
+ * - on Linux: ~/.config/{app name}/logs/
+ * - on macOS: ~/Library/Logs/{app name}/
+ * - on Windows: %USERPROFILE%\AppData\Roaming\{app name}\logs\
  */
 export const logger = {
   error: (message: string, error?: Error) => {
-    // In production, write to logs on disk, or external logging service.
-    // Here, we just show an example with console.error.
-    console.error(`[ERROR]: ${message}`, error);
+    log.error(`${message}`, error);
   },
   info: (message: string) => {
-    console.info(`[INFO]: ${message}`);
+    log.info(message);
   },
-  // Add debug, warn, etc. as needed
+  // Add other log levels as needed
+  debug: (message: string) => {
+    log.debug(message);
+  },
+  warn: (message: string) => {
+    log.warn(message);
+  }
 };

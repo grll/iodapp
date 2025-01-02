@@ -155,7 +155,7 @@ export function restartClaudeDesktop() {
  */
 export function watchClaudeDesktopConfig(mainWindow: BrowserWindow) {
   if (!existsSync(CLAUDE_DESKTOP_CONFIG_PATH)) {
-    console.error(
+    logger.error(
       `Claude Desktop App config file not found at '${CLAUDE_DESKTOP_CONFIG_PATH}'`
     );
     return false;
