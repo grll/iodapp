@@ -20,8 +20,6 @@ const archIndex = process.argv.indexOf('--arch');
 const targetPlatform = platformIndex !== -1 ? process.argv[platformIndex + 1] : process.platform;
 const targetArch = archIndex !== -1 ? process.argv[archIndex + 1] : process.arch;
 
-
-
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
