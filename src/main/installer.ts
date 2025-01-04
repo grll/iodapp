@@ -11,7 +11,7 @@ import path from "node:path";
 import os from "node:os";
 import fs, { existsSync, mkdirSync } from "node:fs";
 import http from "isomorphic-git/http/node";
-import { BrowserWindow, app } from "electron";
+import { type BrowserWindow, app } from "electron";
 import { clone } from "isomorphic-git";
 
 import { AppError } from "../shared/error";
@@ -132,6 +132,7 @@ function resolveBinaryPath(binary: string) {
     process.platform,
     process.arch
   );
+
   if (app.isPackaged) {
     // when packaged, the binaries are in the Resources folder of the app
     // we have to follow the way forge package the app to find the binaries
@@ -240,7 +241,7 @@ function replaceBinaries(config: MCPServerConfig) {
  * It will be used to set --directory for uv or --prefix for npm.
  * @returns The fixed config
  */
-function fixConfig(config: MCPServerConfig, repoDir?: string) {
+export function fixConfig(config: MCPServerConfig, repoDir?: string) {
   let fixedConfig = structuredClone(config);
 
   let { args } = config;
