@@ -103,6 +103,13 @@ export function writeMCPServerConfig(
   try {
     const config = readFileSync(CLAUDE_DESKTOP_CONFIG_PATH, "utf8");
     const jsonConfig = JSON.parse(config) as ClaudeDesktopConfig;
+
+    // if the mcpServers field is not present, create it
+    // this would be the case if we just created the config file for example.
+    if (!jsonConfig.mcpServers) {
+      jsonConfig.mcpServers = {};
+    }
+
     jsonConfig.mcpServers[serverName] = serverConfig;
     writeFileSync(
       CLAUDE_DESKTOP_CONFIG_PATH,
