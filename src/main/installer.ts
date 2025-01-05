@@ -186,11 +186,22 @@ function updateUVArgs(args: string[], repoDir?: string) {
  * @param args - The args of the MCP server config
  * @returns A new args array updated
  */
-function updateUVXArgs(args: string[]) {
+function updateUVXArgs(args: string[], repoDir?: string) {
   const returnedArgs = Array.from(args);
 
   const uvxIndex = args.indexOf("uvx");
   if (uvxIndex === -1) return returnedArgs;
+
+  // Replace from path with cloned directory path if necessary
+  const directoryFlagIndex = args.indexOf("--from", uvxIndex);
+  if (directoryFlagIndex !== -1) {
+    if (!repoDir) {
+      throw new Error(
+        "MCP Config is using uvx --from option but no path to a cloned repository directory was provided."
+      );
+    }
+    returnedArgs[directoryFlagIndex + 1] = repoDir;
+  }
 
   return returnedArgs;
 }
@@ -246,7 +257,7 @@ export function fixConfig(config: MCPServerConfig, repoDir?: string) {
 
   let { args } = config;
   args = updateUVArgs(args, repoDir);
-  args = updateUVXArgs(args);
+  args = updateUVXArgs(args, repoDir);
   args = updateNPXArgs(args);
 
   fixedConfig.args = args;
