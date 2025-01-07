@@ -10,7 +10,7 @@
 import { watch, readFileSync, existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 
 import type { BrowserWindow } from "electron";
 
@@ -154,6 +154,43 @@ export function restartClaudeDesktop() {
       end tell
     `;
     return execSync(`osascript -e '${restartScript}'`).toString();
+  }
+
+  if (process.platform === "win32") {
+    const processName = "claude.exe";
+
+    function getProcessPath() {
+      try {
+          const wmicCommand = `wmic process where "name='${processName}'" get ExecutablePath`;
+          const exePath = execSync(wmicCommand, { encoding: 'utf8' })
+              .split('\n')
+              .filter(line => line.trim() && !line.includes('ExecutablePath'))[0]
+              .trim();
+              
+          return exePath;
+      } catch (err) {
+          console.error('Error getting process path:', err);
+          return null;
+      }
+    }
+
+    const processPath = getProcessPath();
+    if (!processPath) {
+      throw new Error("Failed to get the path of the Claude Desktop App process.");
+    }
+
+    const kill = spawn('taskkill', ['/F', '/IM', processName]);
+    
+    kill.on('close', () => {
+        // Once the process is killed, start it again
+        setTimeout(() => {
+            spawn(processPath, [], {
+                detached: true,
+                stdio: 'ignore'
+            }).unref();
+        }, 1000); // Wait 1 second before restarting
+    });
+    return "Claude Desktop App restarted";
   }
 
   throw new Error(
