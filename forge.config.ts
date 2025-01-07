@@ -25,6 +25,9 @@ function getConfig(buildPlatform: string, buildArch: string, targetPlatform: str
         schemes: ["iod"],
       },
     ],
+    extraResource: [
+      `binaries/${targetPlatform}/${targetArch}`,
+    ],
   }
  
 
