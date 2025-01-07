@@ -219,8 +219,14 @@ function updateNPXArgs(args: string[]) {
   const npxIndex = args.indexOf("npx");
   if (npxIndex === -1) return returnedArgs;
 
-  // add fnmx with node v22 which will install (if necessary) and use node v22.
-  returnedArgs.splice(npxIndex, 0, "fnmx", "v22");
+  if (process.platform === "win32") {
+    // if we are on windows, we need to add cmd.exe /c before npx
+    // otherwise PATH is not correctly set and npx / npm are not found.
+    returnedArgs.splice(npxIndex, 0, "fnmx", "v22", "cmd.exe", "/c");
+  } else {
+    // add fnmx with node v22 which will install (if necessary) and use node v22.
+    returnedArgs.splice(npxIndex, 0, "fnmx", "v22");
+  }
 
   return returnedArgs;
 }
@@ -252,7 +258,7 @@ function replaceBinaries(config: MCPServerConfig) {
  * It will be used to set --directory for uv or --prefix for npm.
  * @returns The fixed config
  */
-export function fixConfig(config: MCPServerConfig, repoDir?: string) {
+export function fixConfig(config: MCPServerConfig, serverName: string, repoDir?: string) {
   let fixedConfig = structuredClone(config);
 
   let { args } = config;
@@ -266,6 +272,13 @@ export function fixConfig(config: MCPServerConfig, repoDir?: string) {
   // to reduce dependencies on the user's system to a minimum
   // uv takes care of installing python env, fnm takes care of installing node/npm
   fixedConfig = replaceBinaries(fixedConfig);
+
+  // if we are on windows, we need to make sure the uv cache dir of each
+  // MCP server is unique to avoid conflicts.
+  if (process.platform === "win32") {
+    fixedConfig.env.UV_CACHE_DIR = path.join(IOD_HOME, "uv", "cache", serverName);
+  }
+
   return fixedConfig;
 }
 
@@ -298,7 +311,7 @@ export async function install(url: string, mainWindow?: BrowserWindow) {
     }
 
     const serverConfig = installConfig.config[serverName];
-    const fixedServerConfig = fixConfig(serverConfig, repoDir);
+    const fixedServerConfig = fixConfig(serverConfig, serverName, repoDir);
     writeMCPServerConfig(serverName, fixedServerConfig);
     restartClaudeDesktop();
 
