@@ -3,7 +3,7 @@
  * It handles the main application logic and interactions with the electron API.
  */
 
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "path";
 import started from "electron-squirrel-startup";
 
@@ -119,6 +119,16 @@ function createWindow() {
     "claude:delete-mcp-server": deleteMCPServer,
   };
   registerIpcHandlers(handlers);
+
+
+  // make sure that external links opened from the app are opened in the default browser.
+  mainWindow.webContents.setWindowOpenHandler((event) => {
+    if (event.url.startsWith("http")) {
+      shell.openExternal(event.url);
+      return { action: "deny" };
+    }
+    return { action: "allow" };
+  });
 
   mainWindow.on("close", () => {
     unregisterIpcHandlers(handlers);
