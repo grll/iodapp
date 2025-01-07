@@ -55,6 +55,13 @@ const CONFIG_PATHS = {
     "Claude",
     "claude_desktop_config.json"
   ),
+  win32: path.join(
+    os.homedir(),
+    "AppData",
+    "Roaming",
+    "Claude",
+    "claude_desktop_config.json"
+  ),
 };
 
 // ============================
